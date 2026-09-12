@@ -8,11 +8,17 @@ final class Activity {
     var end: Date?
     var note: String
 
+    /// The mindful-session sample this activity wrote to HealthKit, if any.
+    /// Kept so an edit can replace it and a delete can remove it, rather than
+    /// leaving orphans in the user's health record.
+    var healthSampleID: UUID?
+
     init(label: String, start: Date = .now, end: Date? = nil, note: String = "") {
         self.label = label
         self.start = start
         self.end = end
         self.note = note
+        self.healthSampleID = nil
     }
 
     var isRunning: Bool { end == nil }

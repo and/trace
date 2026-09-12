@@ -37,7 +37,7 @@ struct HomeView: View {
 
                 Section {
                     if let running {
-                        RunningRow(activity: running) { running.end = .now }
+                        RunningRow(activity: running) { stop(running) }
                     } else {
                         picker
                     }
@@ -52,7 +52,7 @@ struct HomeView: View {
                             .buttonStyle(.plain)
                             .swipeActions(edge: .trailing) {
                                 Button("Delete", role: .destructive) {
-                                    context.delete(activity)
+                                    remove(activity)
                                 }
                             }
                         }
@@ -64,7 +64,7 @@ struct HomeView: View {
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { if !finished.isEmpty { EditButton() } }
-            .sheet(item: $editing) { ActivityEditor(activity: $0) }
+            .sheet(item: $editing) { ActivityEditor(activity: $0, health: health) }
             .alert("New activity", isPresented: $addingCustom) {
                 TextField("Name", text: $customLabel)
                 Button("Start") { start(customLabel) }
@@ -100,8 +100,29 @@ struct HomeView: View {
         customLabel = ""
     }
 
+    private func stop(_ activity: Activity) {
+        activity.end = .now
+        let label = activity.label
+        let start = activity.start
+        let end = activity.end
+        Task {
+            activity.healthSampleID = await health.resyncActivity(
+                previous: activity.healthSampleID, label: label, start: start, end: end)
+        }
+    }
+
+    /// Removes the Health sample before the local record, so the id is still
+    /// readable when we need it.
+    private func remove(_ activity: Activity) {
+        let sampleID = activity.healthSampleID
+        context.delete(activity)
+        if let sampleID {
+            Task { await health.deleteActivity(sampleID: sampleID) }
+        }
+    }
+
     private func delete(at offsets: IndexSet) {
-        for index in offsets { context.delete(finished[index]) }
+        for index in offsets { remove(finished[index]) }
     }
 }
 
@@ -109,6 +130,7 @@ struct HomeView: View {
 
 struct ActivityEditor: View {
     @Bindable var activity: Activity
+    let health: HealthStore
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
     @State private var confirmingDelete = false
@@ -151,13 +173,27 @@ struct ActivityEditor: View {
                     // Dismiss before deleting: the sheet is bound to this
                     // object, and tearing it out from under the view first
                     // leaves @Bindable pointing at a deleted model.
+                    let sampleID = activity.healthSampleID
                     dismiss()
                     context.delete(activity)
+                    if let sampleID {
+                        Task { await health.deleteActivity(sampleID: sampleID) }
+                    }
                 }
             }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done") {
+                        // The name or times may have changed; HealthKit samples
+                        // are immutable, so replace rather than edit.
+                        let (previous, label) = (activity.healthSampleID, activity.label)
+                        let (start, end) = (activity.start, activity.end)
+                        dismiss()
+                        Task {
+                            activity.healthSampleID = await health.resyncActivity(
+                                previous: previous, label: label, start: start, end: end)
+                        }
+                    }
                 }
             }
         }

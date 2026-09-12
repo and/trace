@@ -44,6 +44,18 @@ the question.
 **Trends.** A daily *strain* score over the last 60 days, and mean strain broken
 down by activity — which of the things you do line up with your harder days.
 
+## Activities in Apple Health
+
+A finished activity is also written to Apple Health as a **mindful session**,
+carrying its label in sample metadata, so other health apps can line your
+activities up against the same physiology. Editing an activity replaces that
+sample and deleting one removes it, since HealthKit samples are immutable and
+orphans in a health record are worse than none.
+
+The tradeoff is the container: Mindful Minutes is the only interval-shaped slot
+in Health that is not a workout, so logged study time and genuine meditation
+share a bucket. That is the cost of not writing workouts — see below.
+
 ## The strain score
 
 Apple Health has no "stress" metric. Trace derives one from the two signals that
@@ -72,9 +84,9 @@ line is a sparse connect-the-dots, and within-session detail is not recoverable.
 **It does not guess.** No auto-detection of what you are doing, no inferred
 categories, no coaching. The label comes from you or it does not exist.
 
-**It does not leave the phone.** Activities live in a local SwiftData store.
-Health data is read on-device through HealthKit and never transmitted. There is
-no account, no server, no analytics.
+**It does not leave the phone.** Activities live in a local SwiftData store and
+are mirrored into Apple Health on-device. Health data is read through HealthKit
+and never transmitted. There is no account, no server, no analytics.
 
 ## Correlation is not cause
 

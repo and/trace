@@ -13,6 +13,11 @@ final class HealthStore: ObservableObject {
     private let hrvType = HKQuantityType(.heartRateVariabilitySDNN)
     private let rhrType = HKQuantityType(.restingHeartRate)
     private let hrType = HKQuantityType(.heartRate)
+    private let mindfulType = HKCategoryType(.mindfulSession)
+
+    /// Custom metadata key carrying the activity's label, since a mindful
+    /// session has no name of its own.
+    static let labelKey = "TraceActivityLabel"
 
     var isAvailable: Bool { HKHealthStore.isHealthDataAvailable() }
 
@@ -22,8 +27,9 @@ final class HealthStore: ObservableObject {
     func requestAuthorization() async {
         guard isAvailable else { return }
         let read: Set<HKObjectType> = [hrvType, rhrType, hrType]
+        let share: Set<HKSampleType> = [mindfulType]
         do {
-            try await store.requestAuthorization(toShare: [], read: read)
+            try await store.requestAuthorization(toShare: share, read: read)
         } catch {
             // Nothing actionable: queries below will just come back empty.
         }
@@ -108,5 +114,52 @@ final class HealthStore: ObservableObject {
             }
             store.execute(query)
         }
+    }
+
+    // MARK: - Writing activities back to Health
+
+    /// Saves a finished activity as a mindful session so other health apps can
+    /// see it. Mindful Minutes is the only interval-shaped container in Health
+    /// that is not a workout — the tradeoff is that study time and real
+    /// meditation land in the same bucket.
+    ///
+    /// Returns the new sample's id, or nil if the write was refused. Write
+    /// authorisation IS observable (unlike read), but a refusal is not worth
+    /// surfacing mid-gesture — the activity is still saved locally.
+    func writeActivity(label: String, start: Date, end: Date) async -> UUID? {
+        guard isAvailable, end > start else { return nil }
+        guard store.authorizationStatus(for: mindfulType) == .sharingAuthorized else { return nil }
+
+        let sample = HKCategorySample(
+            type: mindfulType,
+            value: HKCategoryValue.notApplicable.rawValue,
+            start: start,
+            end: end,
+            metadata: [Self.labelKey: label]
+        )
+        do {
+            try await store.save(sample)
+            return sample.uuid
+        } catch {
+            return nil
+        }
+    }
+
+    /// Removes a sample this app wrote. HealthKit only permits deleting your
+    /// own samples, so this can never touch data from the Watch or another app.
+    func deleteActivity(sampleID: UUID) async {
+        guard isAvailable else { return }
+        _ = try? await store.deleteObjects(
+            of: mindfulType,
+            predicate: HKQuery.predicateForObject(with: sampleID)
+        )
+    }
+
+    /// Replaces the sample for an edited activity: delete then re-save, since
+    /// HealthKit samples are immutable.
+    func resyncActivity(previous: UUID?, label: String, start: Date, end: Date?) async -> UUID? {
+        if let previous { await deleteActivity(sampleID: previous) }
+        guard let end else { return nil }   // still running: nothing to write yet
+        return await writeActivity(label: label, start: start, end: end)
     }
 }
