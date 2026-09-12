@@ -8,6 +8,12 @@ ten beats high was a hard debugging session, or that the calm stretch was readin
 Trace supplies the missing half: you log what you were doing, and it draws that on
 top of the data Health already collected.
 
+<p align="center">
+  <img src="docs/screenshots/today.png" width="340" alt="Trace's Today screen: a day of heart rate with a logged activity drawn as a shaded band across its duration">
+</p>
+
+<p align="center"><sub>The Today screen — heart rate across the day, with each logged activity as a band spanning its real duration.</sub></p>
+
 ## The idea
 
 Health tracking apps tell you *what happened*. They can't tell you *why*, because
