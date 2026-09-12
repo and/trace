@@ -25,6 +25,13 @@ final class HealthStore: ObservableObject {
     /// simply returns no samples, which is indistinguishable from having no
     /// data. So this only records that we asked; it never branches on the answer.
     func requestAuthorization() async {
+        #if DEBUG
+        if SampleData.isEnabled {
+            didRequestAuth = true
+            await load()
+            return
+        }
+        #endif
         guard isAvailable else { return }
         let read: Set<HKObjectType> = [hrvType, rhrType, hrType]
         let share: Set<HKSampleType> = [mindfulType]
@@ -38,6 +45,12 @@ final class HealthStore: ObservableObject {
     }
 
     func load(daysBack: Int = 60) async {
+        #if DEBUG
+        if SampleData.isEnabled {
+            days = SampleData.days()
+            return
+        }
+        #endif
         guard isAvailable else { return }
         isLoading = true
         defer { isLoading = false }
@@ -94,6 +107,9 @@ final class HealthStore: ObservableObject {
     /// workout the watch samples every few minutes, so expect a sparse line
     /// rather than a smooth trace.
     func heartRate(on day: Date) async -> [HRSample] {
+        #if DEBUG
+        if SampleData.isEnabled { return SampleData.heartRate(on: day) }
+        #endif
         guard isAvailable else { return [] }
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: day)

@@ -61,21 +61,27 @@ struct DayView: View {
     /// Activities clipped to this day, so a session crossing midnight shows
     /// only the part that belongs here.
     private var bands: [Band] {
-        activities.compactMap { activity in
+        let spans: [(id: PersistentIdentifier, span: BandSpan)] = activities.compactMap { activity in
             guard let span = BandLayout.clip(
                 label: activity.label,
                 start: activity.start,
                 end: activity.end,
                 toDayStarting: day
             ) else { return nil }
-            return Band(id: activity.persistentModelID, span: span)
+            return (id: activity.persistentModelID, span: span)
         }
-        .sorted { $0.span.start < $1.span.start }
+        return spans
+            .sorted { $0.span.start < $1.span.start }
+            .enumerated()
+            .map { Band(id: $0.element.id, span: $0.element.span, row: $0.offset % 2) }
     }
 
     private struct Band: Identifiable {
         let id: PersistentIdentifier
         let span: BandSpan
+        /// Alternating label row. Bands often sit close together, and labels
+        /// wider than their band would otherwise overlap each other.
+        let row: Int
     }
 
     var body: some View {
@@ -167,7 +173,7 @@ struct DayView: View {
                     spacing: 4,
                     overflowResolution: Self.labelOverflow
                 ) {
-                    BandLabel(text: band.span.label)
+                    BandLabel(text: band.span.label, row: band.row)
                 }
             }
 
@@ -238,6 +244,7 @@ struct DayView: View {
 /// chart builder, its modifier chain blows the type checker's budget.
 private struct BandLabel: View {
     let text: String
+    let row: Int
 
     var body: some View {
         Text(text)
@@ -248,6 +255,7 @@ private struct BandLabel: View {
             .padding(.vertical, 1)
             .background(background)
             .fixedSize()
+            .offset(y: CGFloat(row) * 15)
     }
 
     private var background: some View {

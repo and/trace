@@ -12,7 +12,7 @@ top of the data Health already collected.
   <img src="docs/screenshots/today.png" width="340" alt="Trace's Today screen: a day of heart rate with a logged activity drawn as a shaded band across its duration">
 </p>
 
-<p align="center"><sub>The Today screen — heart rate across the day, with each logged activity as a band spanning its real duration.</sub></p>
+<p align="center"><sub>The Today screen — heart rate across the day, with each logged activity as a band spanning its real duration. Captured with <code>-sample-data</code>, so the readings are synthetic rather than anyone's.</sub></p>
 
 ## The idea
 
@@ -149,6 +149,19 @@ data and no device:
 test could reach: two buttons in one `List` row let the row swallow their taps.
 Reverting that one fix fails three of its five cases, so it is a real regression
 test rather than decoration.
+
+### Sample data
+
+Launch with `-sample-data` (DEBUG builds only) and the app serves synthetic
+readings instead of reaching HealthKit at all — a deterministic day of heart
+rate, sixty days of HRV and resting heart rate, and three activities. It is how
+the screenshot above was taken, and it makes the UI workable in the Simulator,
+where HealthKit returns nothing. It bypasses HealthKit rather than seeding it:
+writing heart rate would need share access this app has no business holding.
+
+```sh
+xcrun simctl launch <device> com.and.Trace -sample-data
+```
 
 What the suite still does **not** cover: the other half of that bug, where a
 scrollable chart held a scroll offset pointing into the previous day's domain and
