@@ -74,12 +74,26 @@ baseline yet, so every day reads as typical. That is honest behaviour, not a bug
 
 ## What it deliberately does not do
 
-**It does not run a workout session.** A workout would raise heart-rate sampling
-from roughly one reading every 2.6 minutes to one every 5 seconds — a 30×
-improvement — but it would also write a workout to Health, inflate the Activity
-rings, and drain the battery. Trace accepts coarse sampling in exchange for
-costing nothing to run. The consequence is real and worth stating: the intraday
-line is a sparse connect-the-dots, and within-session detail is not recoverable.
+**It does not run a workout session.** A workout is the only thing that raises
+heart-rate sampling from roughly one reading every 2.6 minutes to one every 5
+seconds — a 30× difference, measured on real exports. The cost is that every
+session becomes a permanent workout entry in Health and Fitness, and a sedentary
+one distorts the Activity rings to a degree that depends entirely on the type
+chosen:
+
+- **`Other`** applies a brisk-walk floor: a full Exercise minute for every minute
+  elapsed, and active calories at brisk-walk rate *or* the heart-rate-derived
+  rate, whichever is higher. A two-hour study session would fabricate 120
+  Exercise minutes and a calorie burn that never happened.
+- **Heart-rate-estimated types** (`Yoga`, `Mind & Body`) distort far less, since
+  calories follow your actual heart rate — but they are the wrong label for
+  studying, and they collide with those activities if you genuinely do them.
+
+Plus the battery cost of continuous green-LED sampling. Trace accepts coarse
+sampling instead, in exchange for costing nothing to run and leaving your rings
+honest. The consequence is real and worth stating: the intraday line is a sparse
+connect-the-dots, and within-session detail is not recoverable afterwards — no
+amount of logging recovers samples that were never taken.
 
 **It does not guess.** No auto-detection of what you are doing, no inferred
 categories, no coaching. The label comes from you or it does not exist.
