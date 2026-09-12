@@ -33,3 +33,19 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: RLVYQT69D4
+  TraceTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget:
+      iOS: "18.0"
+    sources:
+      - path: TraceTests
+    dependencies:
+      - target: Trace
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.and.TraceTests
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: RLVYQT69D4

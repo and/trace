@@ -19,6 +19,18 @@ struct DayView: View {
     @State private var visibleSpan: TimeInterval = 86_400
     @State private var spanAtPinchStart: TimeInterval?
 
+    /// Where the scrollable x axis is parked. It must be re-anchored whenever
+    /// the day changes, or it keeps pointing into the previous day's domain and
+    /// the chart renders empty.
+    @State private var scrollPosition: Date = Calendar.current.startOfDay(for: .now)
+
+    /// Hoisted out of the chart builder: inferring `.init(x:y:)` and the
+    /// leaf strategies in place exceeds the type checker's budget.
+    private static let labelOverflow = AnnotationOverflowResolution(
+        x: AnnotationOverflowResolution.Strategy.fit(to: .plot),
+        y: AnnotationOverflowResolution.Strategy.disabled
+    )
+
     private static let minSpan: TimeInterval = 900      // 15 minutes
     private static let maxSpan: TimeInterval = 86_400   // the full day
 
@@ -44,27 +56,26 @@ struct DayView: View {
         }
     }
 
-    private var dayEnd: Date {
-        Calendar.current.date(byAdding: .day, value: 1, to: day) ?? day
-    }
+    private var dayEnd: Date { DayCursor.bounds(of: day).upperBound }
 
     /// Activities clipped to this day, so a session crossing midnight shows
     /// only the part that belongs here.
     private var bands: [Band] {
         activities.compactMap { activity in
-            let start = max(activity.start, day)
-            let end = min(activity.end ?? .now, dayEnd)
-            guard end > start else { return nil }
-            return Band(id: activity.persistentModelID, label: activity.label, start: start, end: end)
+            guard let span = BandLayout.clip(
+                label: activity.label,
+                start: activity.start,
+                end: activity.end,
+                toDayStarting: day
+            ) else { return nil }
+            return Band(id: activity.persistentModelID, span: span)
         }
-        .sorted { $0.start < $1.start }
+        .sorted { $0.span.start < $1.span.start }
     }
 
     private struct Band: Identifiable {
         let id: PersistentIdentifier
-        let label: String
-        let start: Date
-        let end: Date
+        let span: BandSpan
     }
 
     var body: some View {
@@ -89,7 +100,12 @@ struct DayView: View {
 
     private var header: some View {
         HStack {
-            Button { shift(-1) } label: { Image(systemName: "chevron.left") }
+            Button { shift(-1) } label: {
+                Image(systemName: "chevron.left")
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
             Spacer()
             VStack {
                 Text(day.formatted(.dateTime.day().month(.wide).year()))
@@ -99,8 +115,13 @@ struct DayView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button { shift(1) } label: { Image(systemName: "chevron.right") }
-                .disabled(dayEnd > Date())
+            Button { shift(1) } label: {
+                Image(systemName: "chevron.right")
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .disabled(DayCursor.isAtPresent(day: day))
         }
     }
 
@@ -125,23 +146,23 @@ struct DayView: View {
             // Bands first so the line draws over them.
             ForEach(bands) { band in
                 RectangleMark(
-                    xStart: .value("Start", band.start),
-                    xEnd: .value("End", band.end),
+                    xStart: .value("Start", band.span.start),
+                    xEnd: .value("End", band.span.end),
                     yStart: .value("BPM", yDomain.lowerBound),
                     yEnd: .value("BPM", yDomain.upperBound)
                 )
                 .foregroundStyle(Color.seriesPrimary.opacity(0.14))
-                .annotation(position: .overlay, alignment: .top, spacing: 4) {
-                    Text(band.label)
-                        .font(.caption2.weight(.medium))
-                        .foregroundStyle(Color.seriesPrimary)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 1)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(.background.opacity(0.75))
-                        )
-                        .fixedSize()
+                // Fitting to the plot keeps the label inside it, so a narrow
+                // band near an edge no longer pushes its label over the axis
+                // labels. Without it the label is centred on the band and a
+                // short activity's name spills straight out of the chart.
+                .annotation(
+                    position: .overlay,
+                    alignment: .top,
+                    spacing: 4,
+                    overflowResolution: Self.labelOverflow
+                ) {
+                    BandLabel(text: band.span.label)
                 }
             }
 
@@ -165,6 +186,7 @@ struct DayView: View {
         }
         .chartScrollableAxes(.horizontal)
         .chartXVisibleDomain(length: visibleSpan)
+        .chartScrollPosition(x: $scrollPosition)
         .frame(height: 240)
         .gesture(
             MagnifyGesture()
@@ -192,13 +214,39 @@ struct DayView: View {
     }
 
     private func shift(_ days: Int) {
-        guard let next = Calendar.current.date(byAdding: .day, value: days, to: day) else { return }
+        guard let next = DayCursor.step(from: day, by: days) else { return }
         day = next
+        // Re-anchor the scroll and drop back to the whole day, so the new day
+        // is never shown through the previous day's window.
+        visibleSpan = Self.maxSpan
+        scrollPosition = next
     }
 
     private func reload() async {
         loading = true
         samples = await health.heartRate(on: day)
         loading = false
+    }
+}
+
+/// The chip naming an activity band. Kept as its own view: inlined in the
+/// chart builder, its modifier chain blows the type checker's budget.
+private struct BandLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption2.weight(.medium))
+            .lineLimit(1)
+            .foregroundStyle(Color.seriesPrimary)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .background(background)
+            .fixedSize()
+    }
+
+    private var background: some View {
+        RoundedRectangle(cornerRadius: 4)
+            .fill(.background.opacity(0.75))
     }
 }
