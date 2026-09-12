@@ -110,4 +110,28 @@ xcodebuild -project Trace.xcodeproj -scheme Trace \
   -allowProvisioningUpdates -allowProvisioningDeviceRegistration build
 ```
 
-HealthKit returns no data in the Simulator, so a physical device is required.
+HealthKit returns no data in the Simulator, so a physical device is required to
+use the app.
+
+## Tests
+
+```sh
+xcodebuild test -project Trace.xcodeproj -scheme Trace \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
+```
+
+The suite runs on the Simulator — it covers pure logic, so it needs no health
+data and no device:
+
+| Suite | Covers |
+|---|---|
+| `DayCursorTests` | Day stepping: midnight normalisation, refusing the future, a 7-day round trip |
+| `BandLayoutTests` | Clipping activities to a day: midnight crossings, zero-width bands, inverted intervals |
+| `StressScoreTests` | The strain score, chiefly the cases with too little history to have a baseline |
+| `ActivityTests` | The model, against an in-memory `ModelContainer` |
+
+What this does **not** cover: SwiftUI and Swift Charts interaction. The day
+stepper once froze because a scrollable chart kept a scroll offset pointing into
+the previous day's domain, and because two buttons in one list row let the row
+swallow their taps. Neither is reachable from a unit test — that class of bug
+needs a UI test or a real device.
