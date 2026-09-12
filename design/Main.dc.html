@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    body { margin: 0; font-family: -apple-system, "SF Pro Text", system-ui, sans-serif; }
+    a { color: #2a78d6; } a:hover { color: #1c5cab; }
+    .card { background: #ffffff; border-radius: 10px; }
+    .rowsep { border-top: 0.5px solid rgba(60,60,67,0.29); }
+    .chip {
+      display: flex; align-items: center; justify-content: center;
+      height: 44px; padding: 0 16px; border-radius: 10px;
+      background: rgba(42,120,214,0.10); color: #2a78d6;
+      font-size: 15px; font-weight: 500; white-space: nowrap;
+    }
+  </style>
+</helmet>
+
+<div style="width: 390px; height: 844px; background: #f2f2f7; display: flex; flex-direction: column; overflow: hidden;">
+
+  <!-- Safe area left empty: the real status bar paints here -->
+  <div style="height: 59px; flex-shrink: 0;"></div>
+
+  <div style="height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: rgba(249,249,249,0.94); border-bottom: 0.5px solid rgba(60,60,67,0.29);">
+    <div style="font-size: 17px; font-weight: 600; color: #000000; letter-spacing: -0.4px;">Today</div>
+  </div>
+
+  <div style="flex-grow: 1; overflow: hidden; display: flex; flex-direction: column; gap: 22px; padding: 18px 16px 0 16px;">
+
+    <!-- Chart -->
+    <div class="card" style="padding: 14px 16px 10px 16px;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+        <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: flex-start;">
+          <svg width="11" height="18" viewBox="0 0 11 18" fill="none" stroke="#2a78d6" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 1.5 L2 9 L9.5 16.5"/></svg>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 1px;">
+          <div style="font-size: 16px; font-weight: 600; color: #000000; letter-spacing: -0.3px;">12 September 2026</div>
+          <div style="font-size: 11px; font-weight: 600; color: rgba(60,60,67,0.6); letter-spacing: 0.5px;">HEART RATE</div>
+        </div>
+        <div style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: flex-end;">
+          <svg width="11" height="18" viewBox="0 0 11 18" fill="none" stroke="rgba(60,60,67,0.3)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5 L9 9 L1.5 16.5"/></svg>
+        </div>
+      </div>
+
+      <svg width="100%" viewBox="0 0 358 258" fill="none" style="display: block;">
+        <!-- activity bands, drawn under the trace -->
+        <rect x="149.2" y="26" width="37.3" height="210" fill="#2a78d6" opacity="0.13" rx="2"/>
+        <rect x="313.3" y="26" width="18.6" height="210" fill="#2a78d6" opacity="0.13" rx="2"/>
+        <text x="167.8" y="18" text-anchor="middle" font-family="-apple-system, system-ui, sans-serif" font-size="11" font-weight="500" fill="rgba(60,60,67,0.6)">Study</text>
+        <text x="322.6" y="18" text-anchor="middle" font-family="-apple-system, system-ui, sans-serif" font-size="11" font-weight="500" fill="rgba(60,60,67,0.6)">Reading</text>
+
+        <!-- gridlines -->
+        <line x1="0" y1="216.9" x2="358" y2="216.9" stroke="rgba(60,60,67,0.14)" stroke-width="1"/>
+        <line x1="0" y1="121.5" x2="358" y2="121.5" stroke="rgba(60,60,67,0.14)" stroke-width="1"/>
+        <text x="4" y="213" font-family="-apple-system, system-ui, sans-serif" font-size="10" fill="rgba(60,60,67,0.3)">50</text>
+        <text x="4" y="117.5" font-family="-apple-system, system-ui, sans-serif" font-size="10" fill="rgba(60,60,67,0.3)">100</text>
+
+        <g transform="translate(0,26)">
+          <path d="M 0.0 190.0 L 3.2 175.4 L 6.3 169.3 L 9.5 181.5 L 12.7 187.7 L 15.8 176.2 L 19.0 170.8 L 22.2 164.9 L 25.3 184.2 L 28.5 184.3 L 31.7 166.7 L 34.8 168.4 L 38.0 159.0 L 41.2 163.5 L 44.4 172.7 L 47.5 174.2 L 50.7 149.8 L 53.9 174.5 L 57.0 179.0 L 60.2 182.3 L 63.4 172.1 L 66.5 172.2 L 69.7 176.9 L 72.9 175.1 L 76.0 172.8 L 79.2 169.9 L 82.4 167.2 L 85.5 175.6 L 88.7 190.9 L 91.9 173.0 L 95.0 190.9 L 98.2 174.9 L 101.4 180.4 L 104.5 162.0 L 107.7 163.0 L 110.9 148.8 L 114.1 116.7 L 117.2 139.7 L 120.4 129.8 L 123.6 147.2 L 126.7 137.2 L 129.9 127.9 L 133.1 133.3 L 136.2 128.2 L 139.4 129.5 L 142.6 138.0 L 145.7 123.6 L 148.9 134.6 L 152.1 110.8 L 155.2 65.6 L 158.4 54.8 L 161.6 125.1 L 164.7 116.5 L 167.9 129.6 L 171.1 115.6 L 174.2 125.2 L 177.4 113.3 L 180.6 118.9 L 183.8 123.2 L 186.9 131.5 L 190.1 118.6 L 193.3 121.7 L 196.4 112.2 L 199.6 130.2 L 202.8 123.0 L 205.9 124.3 L 209.1 127.1 L 212.3 128.7 L 215.4 130.0 L 218.6 137.8 L 221.8 142.5 L 224.9 138.3 L 228.1 131.0 L 231.3 124.3 L 234.4 130.0 L 237.6 130.6 L 240.8 134.1 L 243.9 135.9 L 247.1 141.4 L 250.3 137.4 L 253.5 129.8 L 256.6 148.8 L 259.8 152.8 L 263.0 43.0 L 266.1 58.5 L 269.3 52.9 L 272.5 142.1 L 275.6 159.8 L 278.8 129.5 L 282.0 135.4 L 285.1 149.3 L 288.3 144.4 L 291.5 149.7 L 294.6 158.2 L 297.8 151.3 L 301.0 146.7 L 304.1 139.9 L 307.3 142.8 L 310.5 147.8 L 313.6 137.5 L 316.8 157.3 L 320.0 145.5 L 323.2 144.4 L 326.3 158.1 L 329.5 172.6 L 332.7 166.6 L 335.8 158.4 L 339.0 157.6 L 342.2 150.4 L 345.3 174.0 L 348.5 166.9 L 351.7 163.0 L 354.8 171.6 L 358.0 190.9" stroke="#2a78d6" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+        </g>
+
+        <text x="0" y="252" font-family="-apple-system, system-ui, sans-serif" font-size="10" fill="rgba(60,60,67,0.6)">12 AM</text>
+        <text x="89.5" y="252" text-anchor="middle" font-family="-apple-system, system-ui, sans-serif" font-size="10" fill="rgba(60,60,67,0.6)">6 AM</text>
+        <text x="179" y="252" text-anchor="middle" font-family="-apple-system, system-ui, sans-serif" font-size="10" fill="rgba(60,60,67,0.6)">12 PM</text>
+        <text x="268.5" y="252" text-anchor="middle" font-family="-apple-system, system-ui, sans-serif" font-size="10" fill="rgba(60,60,67,0.6)">6 PM</text>
+        <text x="358" y="252" text-anchor="end" font-family="-apple-system, system-ui, sans-serif" font-size="10" fill="rgba(60,60,67,0.6)">12 AM</text>
+      </svg>
+
+      <div style="font-size: 12px; color: rgba(60,60,67,0.6); padding-top: 4px; line-height: 1.35;">212 readings. Shaded bands span each logged activity.</div>
+    </div>
+
+    <!-- Start an activity -->
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 13px; font-weight: 400; color: rgba(60,60,67,0.6); padding-left: 4px; letter-spacing: -0.1px;">START AN ACTIVITY</div>
+      <div style="display: flex; gap: 8px; overflow: hidden;">
+        <div class="chip">Study</div>
+        <div class="chip">Deep work</div>
+        <div class="chip">Meeting</div>
+        <div class="chip" style="opacity: 0.5;">Read</div>
+      </div>
+    </div>
+
+    <!-- Recent -->
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="font-size: 13px; color: rgba(60,60,67,0.6); padding-left: 4px;">RECENT</div>
+      <div class="card">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 11px 16px;">
+          <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+            <div style="font-size: 16px; color: #000000; letter-spacing: -0.3px;">Reading</div>
+            <div style="font-size: 12px; color: rgba(60,60,67,0.6);">30 Apr 2026 at 9:00 PM</div>
+          </div>
+          <div style="font-size: 13px; color: rgba(60,60,67,0.6); font-variant-numeric: tabular-nums;">1h 15m</div>
+          <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(60,60,67,0.3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1 L6 6 L1 11"/></svg>
+        </div>
+        <div class="rowsep" style="display: flex; align-items: center; gap: 10px; padding: 11px 16px;">
+          <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+            <div style="font-size: 16px; color: #000000; letter-spacing: -0.3px;">Study</div>
+            <div style="font-size: 12px; color: rgba(60,60,67,0.6);">30 Apr 2026 at 10:00 AM</div>
+          </div>
+          <div style="font-size: 13px; color: rgba(60,60,67,0.6); font-variant-numeric: tabular-nums;">2h 30m</div>
+          <svg width="7" height="12" viewBox="0 0 7 12" fill="none" stroke="rgba(60,60,67,0.3)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1 L6 6 L1 11"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab bar -->
+  <div style="flex-shrink: 0; height: 83px; background: rgba(249,249,249,0.94); border-top: 0.5px solid rgba(60,60,67,0.29); display: flex; padding-top: 7px;">
+    <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="#2a78d6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 13 H7 L9.5 6 L13.5 20 L16.5 11 L18.5 15 H24"/></svg>
+      <div style="font-size: 10px; color: #2a78d6; font-weight: 500;">Today</div>
+    </div>
+    <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;">
+      <svg width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="rgba(60,60,67,0.6)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3 V22 H23"/><path d="M6.5 17 L11.5 11 L15.5 14.5 L21.5 6.5"/></svg>
+      <div style="font-size: 10px; color: rgba(60,60,67,0.6);">Trends</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

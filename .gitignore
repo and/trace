@@ -1,0 +1,11 @@
+.DS_Store
+DerivedData/
+build/
+*.xcuserstate
+xcuserdata/
+
+# Generated from project.yml by xcodegen
+Trace.xcodeproj/
+
+# Generated design canvas payload (rebuild from design/*.dc.html)
+design/trace-app-ui.html

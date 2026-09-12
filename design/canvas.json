@@ -1,0 +1,12 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Today", "x": 0, "y": 0, "w": 390, "h": 844 },
+    { "file": "Trends.dc.html", "x": 490, "y": 0, "w": 390, "h": 844 },
+    { "file": "EditActivity.dc.html", "title": "Edit Activity", "x": 980, "y": 0, "w": 390, "h": 844 }
+  ],
+  "annotations": [
+    { "id": "note-approach", "x": 0, "y": -150, "w": 390, "text": "Matching the built app: iOS native vocabulary, inset-grouped cards, SF Pro, accent #2a78d6 (the validated blue already in TrendView).\n\nThe Today trace is synthetic sample data shaped like real wrist readings." },
+    { "id": "note-sampling", "x": 490, "y": -150, "w": 390, "text": "Strain is the HRV + resting-HR z-score from the README, centred at 50.\n\nBar values are illustrative — there is no logged-activity history yet to compute them from." }
+  ],
+  "launch": { "view": "canvas" }
+}

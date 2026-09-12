@@ -1,0 +1,35 @@
+name: Trace
+options:
+  bundleIdPrefix: com.and
+  deploymentTarget:
+    iOS: "18.0"
+targets:
+  Trace:
+    type: application
+    platform: iOS
+    sources:
+      - path: Trace
+    info:
+      path: Trace/Info.plist
+      properties:
+        CFBundleDisplayName: Trace
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        NSHealthShareUsageDescription: "Trace reads heart rate variability and resting heart rate so it can show how your stress trends alongside the activities you log."
+        NSHealthUpdateUsageDescription: "Trace saves the activities you log to Apple Health so other health apps can see them."
+    entitlements:
+      path: Trace/Trace.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+    settings:
+      base:
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.9"
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO
+        PRODUCT_BUNDLE_IDENTIFIER: com.and.Trace
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: RLVYQT69D4
