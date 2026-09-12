@@ -49,3 +49,20 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.and.TraceTests
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: RLVYQT69D4
+  TraceUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget:
+      iOS: "18.0"
+    sources:
+      - path: TraceUITests
+    dependencies:
+      - target: Trace
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.and.TraceUITests
+        TEST_TARGET_NAME: Trace
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: RLVYQT69D4

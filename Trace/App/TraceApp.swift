@@ -25,7 +25,10 @@ struct RootView: View {
         }
         .task {
             // Ask on launch rather than behind a button: the app is useless
-            // without it, and HealthKit only ever shows the sheet once.
+            // without it, and HealthKit only ever shows the sheet once. Under
+            // UI test the request is skipped so no system sheet can block the
+            // run — the views being exercised do not need health data.
+            guard !ProcessInfo.processInfo.arguments.contains("-uitesting") else { return }
             if !health.didRequestAuth { await health.requestAuthorization() }
         }
     }

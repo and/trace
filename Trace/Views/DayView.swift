@@ -106,10 +106,13 @@ struct DayView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
+            .accessibilityLabel("Previous day")
+            .accessibilityIdentifier("day.previous")
             Spacer()
             VStack {
                 Text(day.formatted(.dateTime.day().month(.wide).year()))
                     .font(.headline)
+                    .accessibilityIdentifier("day.label")
                 Text("HEART RATE")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
@@ -121,6 +124,8 @@ struct DayView: View {
                     .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
+            .accessibilityLabel("Next day")
+            .accessibilityIdentifier("day.next")
             .disabled(DayCursor.isAtPresent(day: day))
         }
     }

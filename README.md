@@ -129,9 +129,15 @@ data and no device:
 | `BandLayoutTests` | Clipping activities to a day: midnight crossings, zero-width bands, inverted intervals |
 | `StressScoreTests` | The strain score, chiefly the cases with too little history to have a baseline |
 | `ActivityTests` | The model, against an in-memory `ModelContainer` |
+| `DayStepperUITests` | The day stepper driven through the real UI (XCUITest) |
 
-What this does **not** cover: SwiftUI and Swift Charts interaction. The day
-stepper once froze because a scrollable chart kept a scroll offset pointing into
-the previous day's domain, and because two buttons in one list row let the row
-swallow their taps. Neither is reachable from a unit test — that class of bug
-needs a UI test or a real device.
+`DayStepperUITests` exists because the stepper once froze for a reason no unit
+test could reach: two buttons in one `List` row let the row swallow their taps.
+Reverting that one fix fails three of its five cases, so it is a real regression
+test rather than decoration.
+
+What the suite still does **not** cover: the other half of that bug, where a
+scrollable chart held a scroll offset pointing into the previous day's domain and
+rendered blank. The date label updates correctly in that state, so no assertion
+on it can catch a chart that simply drew nothing. Verifying that needs a device
+and a pair of eyes.
