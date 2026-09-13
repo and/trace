@@ -18,7 +18,7 @@ struct TrendView: View {
     /// Hoisted out of the chart builder: inferring this in place costs the type
     /// checker more than it can spend.
     private static let annotationOverflow = AnnotationOverflowResolution(
-        x: AnnotationOverflowResolution.Strategy.fit(to: .chart),
+        x: AnnotationOverflowResolution.Strategy.fit(to: .plot),
         y: AnnotationOverflowResolution.Strategy.disabled
     )
 
@@ -86,8 +86,12 @@ struct TrendView: View {
                     BarValue(mean: row.meanBPM, delta: row.delta)
                 }
             }
-            .chartXScale(domain: 40...(maxBPM + 10))
-            .frame(height: CGFloat(byLabel().count) * 44 + 20)
+            .chartXScale(domain: 40...(maxBPM + 26))
+            // No x axis: every bar carries its own value, so the scale would
+            // only repeat what is already written, and its last tick clipped
+            // against the card edge.
+            .chartXAxis(.hidden)
+            .frame(height: CGFloat(byLabel().count) * 44 + 8)
 
             Text("A positive figure means your heart ran that many beats above your usual for the hours involved. Faded bars rest on fewer than five readings.")
                 .font(.caption2)
@@ -141,8 +145,11 @@ struct TrendView: View {
 
     // MARK: - Data
 
+    /// The upper bound of the bar axis. The headroom is for the value and
+    /// delta drawn past each bar's end: without it the longest bar's label runs
+    /// into the axis labels and out of the card.
     private var maxBPM: Double {
-        max(100, loads.map(\.meanBPM).max() ?? 100)
+        max(100, byLabel().map(\.meanBPM).max() ?? 100)
     }
 
     private func deltaText(_ delta: Double) -> String {
