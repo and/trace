@@ -63,6 +63,7 @@ struct HomeView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .refreshable { await health.refresh() }
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { if !finished.isEmpty { EditButton() } }
@@ -112,6 +113,10 @@ struct HomeView: View {
         Task {
             activity.healthSampleID = await health.resyncActivity(
                 previous: activity.healthSampleID, label: label, start: start, end: end)
+            // Re-read once the activity closes. This is the moment the chart is
+            // worth refreshing — during a session you are not looking at it,
+            // and afterwards you want to see the band over what just happened.
+            await health.refresh()
         }
     }
 

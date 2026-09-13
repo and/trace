@@ -81,6 +81,11 @@ struct DayView: View {
             .map { Band(id: $0.element.id, span: $0.element.span, row: $0.offset % 2) }
     }
 
+    private struct RefreshKey: Equatable {
+        let day: Date
+        let token: Int
+    }
+
     private struct Band: Identifiable {
         let id: PersistentIdentifier
         let span: BandSpan
@@ -106,7 +111,9 @@ struct DayView: View {
                 caption
             }
         }
-        .task(id: day) { await reload() }
+        // Keyed on the refresh token as well as the day, so an explicit
+        // refresh re-reads the same day rather than doing nothing.
+        .task(id: RefreshKey(day: day, token: health.refreshToken)) { await reload() }
     }
 
     private var header: some View {

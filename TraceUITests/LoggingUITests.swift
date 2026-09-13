@@ -76,3 +76,60 @@ final class LoggingUITests: UITestCase {
                       "A typed label should be offered as a chip next time")
     }
 }
+
+/// Refreshing. The chart previously loaded on appear and never again, so a
+/// reading that synced from the watch while the app sat open never showed.
+final class RefreshUITests: UITestCase {
+
+    func testPullToRefreshKeepsTheScreenIntact() {
+        let app = launchApp(sampleData: true)
+        let label = app.staticTexts["day.label"]
+        XCTAssertTrue(label.waitForExistence(timeout: 10))
+        let before = label.label
+
+        // Pull down from the chart area.
+        let top = app.collectionViews.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+        let bottom = app.collectionViews.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
+        top.press(forDuration: 0.1, thenDragTo: bottom)
+
+        XCTAssertTrue(label.waitForExistence(timeout: 10))
+        XCTAssertEqual(label.label, before, "A refresh should not change which day is shown")
+        XCTAssertTrue(app.buttons["chip.Study"].exists, "The screen should still be usable after a refresh")
+    }
+
+    /// Stopping an activity refreshes the chart, and must not throw away the
+    /// day being viewed while doing so.
+    func testStoppingRefreshesWithoutLosingTheDay() {
+        // No sample data here: it seeds activities of its own, and this asserts
+        // on the exact contents of Recent.
+        let app = launchApp()
+        XCTAssertTrue(app.buttons["chip.Study"].waitForExistence(timeout: 10))
+        let today = app.staticTexts["day.label"].label
+
+        app.buttons["chip.Study"].tap()
+        let stop = app.buttons["running.stop"]
+        XCTAssertTrue(stop.waitForExistence(timeout: 5))
+        stop.tap()
+
+        XCTAssertTrue(app.staticTexts["day.label"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["day.label"].label, today)
+        XCTAssertEqual(app.buttons.matching(identifier: "recent.row").count, 1)
+    }
+
+    /// A refresh must not silently drag you back to today.
+    func testRefreshKeepsThePastDayBeingViewed() {
+        let app = launchApp(sampleData: true)
+        XCTAssertTrue(app.buttons["day.previous"].waitForExistence(timeout: 10))
+        app.buttons["day.previous"].tap()
+        let yesterday = app.staticTexts["day.label"].label
+
+        let list = app.collectionViews.firstMatch
+        list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+            .press(forDuration: 0.1,
+                   thenDragTo: list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)))
+
+        XCTAssertTrue(app.staticTexts["day.label"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["day.label"].label, yesterday,
+                       "Refreshing should keep the day you navigated to")
+    }
+}

@@ -5,6 +5,11 @@ import HealthKit
 final class HealthStore: ObservableObject {
 
     @Published private(set) var days: [DayMetrics] = []
+
+    /// Bumped on every explicit refresh. Views key their load task on it, so a
+    /// pull-to-refresh or a return to the foreground re-reads HealthKit — the
+    /// chart otherwise only ever loaded on appear and went stale in place.
+    @Published private(set) var refreshToken = 0
     @Published private(set) var didRequestAuth = false
     @Published private(set) var isLoading = false
 
@@ -41,6 +46,13 @@ final class HealthStore: ObservableObject {
             // Nothing actionable: queries below will just come back empty.
         }
         didRequestAuth = true
+        await load()
+    }
+
+    /// Re-reads everything. Watch samples arrive on the phone in batches, so
+    /// data logged minutes ago may only appear after a refresh.
+    func refresh() async {
+        refreshToken += 1
         await load()
     }
 
