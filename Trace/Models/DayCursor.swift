@@ -32,4 +32,24 @@ enum DayCursor {
         let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start.addingTimeInterval(86_400)
         return start...end
     }
+
+    /// The leading edge of a window of `span` whose trailing edge sits at
+    /// `end` — what a scrollable chart needs to show the END of a period.
+    ///
+    /// Clamped to the day: a window can never start before midnight nor run
+    /// past the day's close, and a span wider than the day simply anchors at
+    /// the start.
+    static func anchor(
+        span: TimeInterval,
+        endingAt end: Date,
+        in day: Date,
+        calendar: Calendar = .current
+    ) -> Date {
+        let bounds = bounds(of: day, calendar: calendar)
+        let clampedEnd = min(max(end, bounds.lowerBound), bounds.upperBound)
+        let candidate = clampedEnd.addingTimeInterval(-span)
+
+        let latestStart = max(bounds.lowerBound, bounds.upperBound.addingTimeInterval(-span))
+        return min(max(candidate, bounds.lowerBound), latestStart)
+    }
 }

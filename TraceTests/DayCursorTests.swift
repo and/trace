@@ -77,3 +77,103 @@ struct DayCursorTests {
         #expect(day == cal.startOfDay(for: now))
     }
 }
+
+/// Where a zoomed window sits. Double-tapping the chart once landed at
+/// midnight because the span changed without the anchor moving; these pin the
+/// arithmetic that decides the window's leading edge.
+struct DayAnchorTests {
+
+    private let cal: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+        return c
+    }()
+
+    private func date(_ s: String) -> Date {
+        let f = DateFormatter()
+        f.calendar = cal; f.timeZone = cal.timeZone
+        f.dateFormat = "yyyy-MM-dd HH:mm"
+        return f.date(from: s)!
+    }
+
+    private let day = "2026-09-12 00:00"
+
+    @Test func anchorsAThreeHourWindowAtTheLastReading() {
+        let anchor = DayCursor.anchor(
+            span: 3 * 3600,
+            endingAt: date("2026-09-12 18:30"),
+            in: date(day),
+            calendar: cal
+        )
+        #expect(anchor == date("2026-09-12 15:30"))
+    }
+
+    /// The window must not start before midnight when the day is barely begun.
+    @Test func clampsToMidnightEarlyInTheDay() {
+        let anchor = DayCursor.anchor(
+            span: 3 * 3600,
+            endingAt: date("2026-09-12 01:00"),
+            in: date(day),
+            calendar: cal
+        )
+        #expect(anchor == date("2026-09-12 00:00"))
+    }
+
+    /// A late reading needs no clamping — the window still fits inside the
+    /// day, so the anchor is simply the reading minus the span.
+    @Test func anchorsRightUpAgainstTheEndOfTheDay() {
+        let anchor = DayCursor.anchor(
+            span: 3 * 3600,
+            endingAt: date("2026-09-12 23:59"),
+            in: date(day),
+            calendar: cal
+        )
+        #expect(anchor == date("2026-09-12 20:59"))
+    }
+
+    @Test func aFullDaySpanAnchorsAtMidnight() {
+        let anchor = DayCursor.anchor(
+            span: 86_400,
+            endingAt: date("2026-09-12 18:30"),
+            in: date(day),
+            calendar: cal
+        )
+        #expect(anchor == date("2026-09-12 00:00"))
+    }
+
+    @Test func aSpanWiderThanTheDayStillAnchorsAtMidnight() {
+        let anchor = DayCursor.anchor(
+            span: 200_000,
+            endingAt: date("2026-09-12 18:30"),
+            in: date(day),
+            calendar: cal
+        )
+        #expect(anchor == date("2026-09-12 00:00"))
+    }
+
+    /// An end outside the day is clamped rather than producing a window that
+    /// floats off the domain entirely.
+    @Test func clampsAnEndBeyondTheDay() {
+        let anchor = DayCursor.anchor(
+            span: 3 * 3600,
+            endingAt: date("2026-09-14 10:00"),
+            in: date(day),
+            calendar: cal
+        )
+        #expect(anchor == date("2026-09-12 21:00"))
+    }
+
+    /// The window always ends at or after the anchor plus the span, and the
+    /// anchor always sits inside the day — the invariants the chart relies on.
+    @Test func anchorAlwaysLandsInsideTheDay() {
+        let bounds = DayCursor.bounds(of: date(day), calendar: cal)
+        for hour in stride(from: 0.0, to: 24.0, by: 0.5) {
+            for span in [900.0, 3600.0, 3 * 3600.0, 12 * 3600.0, 86_400.0] {
+                let end = date(day).addingTimeInterval(hour * 3600)
+                let anchor = DayCursor.anchor(span: span, endingAt: end, in: date(day), calendar: cal)
+                #expect(anchor >= bounds.lowerBound)
+                #expect(anchor.addingTimeInterval(span) <= bounds.upperBound.addingTimeInterval(1))
+            }
+        }
+    }
+}

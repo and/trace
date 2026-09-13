@@ -58,6 +58,11 @@ struct DayView: View {
 
     private var dayEnd: Date { DayCursor.bounds(of: day).upperBound }
 
+    /// The most recent moment with data on this day. Zooming lands here rather
+    /// than at midnight — the end of a day is the part you just lived through,
+    /// and on a past day the hours after the last reading are empty anyway.
+    private var dataEnd: Date { samples.last?.date ?? dayEnd }
+
     /// Activities clipped to this day, so a session crossing midnight shows
     /// only the part that belongs here.
     private var bands: [Band] {
@@ -145,7 +150,7 @@ struct DayView: View {
             Spacer()
             if isZoomed {
                 Button("Full day") {
-                    withAnimation(.easeOut(duration: 0.2)) { visibleSpan = Self.maxSpan }
+                    withAnimation(.easeOut(duration: 0.2)) { setSpan(Self.maxSpan) }
                 }
                 .font(.caption2)
             }
@@ -209,9 +214,14 @@ struct DayView: View {
                 }
                 .onEnded { _ in spanAtPinchStart = nil }
         )
-        .onTapGesture(count: 2) {
-            withAnimation(.easeOut(duration: 0.2)) {
-                visibleSpan = isZoomed ? Self.maxSpan : 3 * 3600
+        .chartOverlay { proxy in
+            GeometryReader { geometry in
+                Rectangle()
+                    .fill(.clear)
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) { location in
+                        handleDoubleTap(at: location, proxy: proxy, geometry: geometry)
+                    }
             }
         }
     }
@@ -224,19 +234,69 @@ struct DayView: View {
             .foregroundStyle(.secondary)
     }
 
+    /// Zooming where the finger landed, rather than at some fixed point:
+    /// a double tap inside an activity frames that activity, one on open chart
+    /// centres on that moment, and a second tap zooms back out.
+    private func handleDoubleTap(at location: CGPoint, proxy: ChartProxy, geometry: GeometryProxy) {
+        guard !isZoomed else {
+            withAnimation(.easeOut(duration: 0.2)) { setSpan(Self.maxSpan) }
+            return
+        }
+        guard let plotFrame = proxy.plotFrame else { return }
+        let x = location.x - geometry[plotFrame].origin.x
+        guard let instant: Date = proxy.value(atX: x) else { return }
+        withAnimation(.easeOut(duration: 0.2)) { zoom(around: instant) }
+    }
+
+    private func zoom(around instant: Date) {
+        if let band = bands.first(where: { $0.span.start <= instant && instant <= $0.span.end }) {
+            // Frame the activity with a margin, so you see its edges in context
+            // rather than flush against them.
+            let margin = max(300, band.span.duration * 0.3)
+            let span = min(Self.maxSpan, max(Self.minSpan, band.span.duration + margin * 2))
+            visibleSpan = span
+            scrollPosition = DayCursor.anchor(
+                span: span, endingAt: band.span.end.addingTimeInterval(margin), in: day)
+        } else {
+            let span = 3 * 3600.0
+            visibleSpan = span
+            scrollPosition = DayCursor.anchor(
+                span: span, endingAt: instant.addingTimeInterval(span / 2), in: day)
+        }
+    }
+
+    /// Changes the window and re-anchors it in one move. Setting a span
+    /// without moving the scroll position leaves the chart parked wherever it
+    /// was — which is how a zoom ended up showing midnight.
+    private func setSpan(_ span: TimeInterval) {
+        visibleSpan = span
+        scrollPosition = span >= Self.maxSpan
+            ? day
+            : DayCursor.anchor(span: span, endingAt: dataEnd, in: day)
+    }
+
     private func shift(_ days: Int) {
         guard let next = DayCursor.step(from: day, by: days) else { return }
         day = next
-        // Re-anchor the scroll and drop back to the whole day, so the new day
-        // is never shown through the previous day's window.
-        visibleSpan = Self.maxSpan
-        scrollPosition = next
+        // The zoom level is kept — losing it on every step made comparing the
+        // same hour across days tedious. The anchor must still be recomputed
+        // for the new day, or the scroll offset points outside its domain and
+        // the chart renders blank. reload() re-anchors once samples arrive.
+        scrollPosition = visibleSpan >= Self.maxSpan
+            ? next
+            : DayCursor.anchor(span: visibleSpan, endingAt: DayCursor.bounds(of: next).upperBound, in: next)
     }
 
     private func reload() async {
         loading = true
         samples = await health.heartRate(on: day)
         loading = false
+
+        // Now that the day's readings are known, park a retained zoom over the
+        // part of the day that actually has data.
+        if visibleSpan < Self.maxSpan {
+            scrollPosition = DayCursor.anchor(span: visibleSpan, endingAt: dataEnd, in: day)
+        }
     }
 }
 

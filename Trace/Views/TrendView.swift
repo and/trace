@@ -67,15 +67,24 @@ struct TrendView: View {
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
                     .foregroundStyle(.secondary.opacity(0.4))
 
-                // Activity days are marked as presence on the same axis, not a
-                // second scale — a dual-axis chart would invite a causal read
-                // the data cannot support.
+                // Days carrying the selected activity, shaded the same way as
+                // the bands on the Today chart. Presence is marked on the same
+                // axis, never a second scale — a dual axis would invite a
+                // causal read the data cannot support.
+                ForEach(Array(selectedDays), id: \.self) { date in
+                    RectangleMark(
+                        xStart: .value("Day", date),
+                        xEnd: .value("Day end", date.addingTimeInterval(86_400))
+                    )
+                    .foregroundStyle(Color.seriesPrimary.opacity(0.16))
+                }
+
                 ForEach(health.days.filter { selectedDays.contains($0.date) }) { day in
                     PointMark(
                         x: .value("Date", day.date),
                         y: .value("Strain", day.stress ?? 0)
                     )
-                    .symbolSize(80)
+                    .symbolSize(70)
                     .foregroundStyle(Color.seriesPrimary)
                 }
             }
@@ -88,6 +97,7 @@ struct TrendView: View {
                     ForEach(labels, id: \.self) { Text($0).tag(String?.some($0)) }
                 }
                 .pickerStyle(.menu)
+                .onAppear { if selectedLabel == nil { selectedLabel = labels.first } }
             }
         }
     }
@@ -109,23 +119,43 @@ struct TrendView: View {
                     y: .value("Activity", row.label)
                 )
                 .cornerRadius(4)
-                .foregroundStyle(Color.seriesPrimary)
+                .foregroundStyle(Color.seriesPrimary.opacity(row.isMeaningful ? 1 : 0.35))
                 .annotation(position: .trailing) {
-                    Text(String(format: "%.0f", row.mean))
-                        .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Text(String(format: "%.0f", row.mean))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                        Text(row.days == 1 ? "1 day" : "\(row.days) days")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
             }
             .chartXScale(domain: 0...100)
             .frame(height: CGFloat(labelSummaries().count) * 44 + 20)
 
-            Text("Days logged, not proof of cause — a heavy study day and a bad night's sleep tend to arrive together.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 4) {
+                if labelSummaries().contains(where: { !$0.isMeaningful }) {
+                    Text("Faded bars rest on fewer than three days. Strain is scored per day, so anything logged on the same day reports that day's score — they will only separate once you have logged across several days.")
+                }
+                Text("Days logged, not proof of cause — a heavy study day and a bad night's sleep tend to arrive together.")
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
         }
     }
 
-    private struct LabelSummary { let label: String; let mean: Double; let days: Int }
+    private struct LabelSummary {
+        let label: String
+        let mean: Double
+        let days: Int
+
+        /// Below this, a "mean" is one or two days wearing a label — and every
+        /// activity logged on the same day necessarily reports that day's
+        /// score, which looks like a bug but is the daily granularity showing
+        /// through.
+        var isMeaningful: Bool { days >= 3 }
+    }
 
     private func labelSummaries() -> [LabelSummary] {
         let stressByDay = Dictionary(

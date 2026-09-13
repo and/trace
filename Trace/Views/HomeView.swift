@@ -15,15 +15,10 @@ struct HomeView: View {
     private var running: Activity? { activities.first { $0.isRunning } }
     private var finished: [Activity] { activities.filter { !$0.isRunning } }
 
-    /// Built-in labels plus every label typed before, most recent first.
+    /// Built-in labels plus every label typed before, ordered by how much you
+    /// actually use them.
     private var quickPicks: [String] {
-        var seen = Set(QuickLabel.all)
-        var remembered: [String] = []
-        for activity in activities where !seen.contains(activity.label) {
-            seen.insert(activity.label)
-            remembered.append(activity.label)
-        }
-        return QuickLabel.all + remembered
+        QuickLabel.ordered(usage: activities.map { (label: $0.label, start: $0.start) })
     }
 
     var body: some View {
