@@ -73,7 +73,7 @@ struct TrendView: View {
 
         return VStack(alignment: .leading, spacing: 8) {
             Text("Heart rate by activity").font(.headline)
-            Text("How far each activity ran from your usual rate for the hours it covered.")
+            Text("How far each activity ran from your usual rate for the hours it covered, across the last 30 days.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -126,6 +126,7 @@ struct TrendView: View {
         let unreliable = rows.contains { !$0.isReliable }
         let unmeasured = byLabel().count - rows.count
         var parts = [base]
+        parts.append("Each bar pools every session carrying that label; individual sessions are listed below.")
         if unreliable { parts.append("Faded bars rest on fewer than five readings.") }
         if unmeasured > 0 {
             parts.append("\(unmeasured) activity\(unmeasured == 1 ? "" : "s") had too little history for those hours to compare against.")
@@ -142,7 +143,13 @@ struct TrendView: View {
 
     private var detail: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Sessions").font(.headline)
+            HStack(alignment: .firstTextBaseline) {
+                Text("Sessions").font(.headline)
+                Spacer()
+                Text(loads.count == 1 ? "1 in the last 30 days" : "\(loads.count) in the last 30 days")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             VStack(spacing: 0) {
                 ForEach(Array(loads.enumerated()), id: \.offset) { index, load in
