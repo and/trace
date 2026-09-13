@@ -19,9 +19,10 @@ struct RootView: View {
     // the daily series isn't fetched twice.
     @StateObject private var health = HealthStore()
 
-    /// DEBUG-only: opens straight to a named tab, so screenshots of Trends do
-    /// not depend on driving the UI. Pairs with -sample-data.
-    private var initialTab: Int {
+    /// Which tab opens first. DEBUG-only `-start-tab` sets it so screenshots
+    /// of Trends need no UI driving; it seeds state rather than pinning it —
+    /// a constant binding here would leave the tab bar inert.
+    private static var initialTab: Int {
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
         if let i = args.firstIndex(of: "-start-tab"), i + 1 < args.count {
@@ -31,8 +32,10 @@ struct RootView: View {
         return 0
     }
 
+    @State private var selectedTab = RootView.initialTab
+
     var body: some View {
-        TabView(selection: .constant(initialTab)) {
+        TabView(selection: $selectedTab) {
             HomeView(health: health)
                 .tabItem { Label("Today", systemImage: "waveform.path.ecg") }
                 .tag(0)
@@ -46,7 +49,16 @@ struct RootView: View {
             // UI test the request is skipped so no system sheet can block the
             // run — the views being exercised do not need health data.
             #if DEBUG
-            seedSampleActivitiesIfNeeded()
+            prepareDebugData()
+            #endif
+            #if DEBUG
+            // Sample data still loads under UI test: it bypasses HealthKit, so
+            // there is no permission sheet to avoid and the Trends screen needs
+            // something to draw.
+            if SampleData.isEnabled {
+                await health.load()
+                return
+            }
             #endif
             guard !ProcessInfo.processInfo.arguments.contains("-uitesting") else { return }
             if !health.didRequestAuth { await health.requestAuthorization() }
@@ -54,9 +66,19 @@ struct RootView: View {
     }
 
     #if DEBUG
-    /// Inserts the screenshot activities once, only under `-sample-data`.
-    private func seedSampleActivitiesIfNeeded() {
-        guard SampleData.isEnabled, existing.isEmpty else { return }
+    /// Resets and seeds in one pass. These cannot be separate steps that both
+    /// consult `existing`: the @Query still reports the pre-delete contents
+    /// within the same update, so a seeder checking it after a reset decides
+    /// the store is occupied and silently skips.
+    private func prepareDebugData() {
+        let shouldReset = ProcessInfo.processInfo.arguments.contains("-reset-data")
+        if shouldReset {
+            for activity in existing { context.delete(activity) }
+        }
+
+        guard SampleData.isEnabled else { return }
+        guard shouldReset || existing.isEmpty else { return }
+
         for (label, start, end) in SampleData.activities() {
             context.insert(Activity(label: label, start: start, end: end))
         }

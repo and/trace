@@ -41,10 +41,17 @@ struct HomeView: View {
                 if !finished.isEmpty {
                     Section("Recent") {
                         ForEach(finished) { activity in
-                            Button { editing = activity } label: {
-                                LoggedRow(activity: activity)
-                            }
-                            .buttonStyle(.plain)
+                            // A Button here has its taps swallowed by the row;
+                            // the row-level tap gesture is what actually fires.
+                            LoggedRow(activity: activity)
+                                .contentShape(Rectangle())
+                                .onTapGesture { editing = activity }
+                                // Combine first: without it the identifier and
+                                // traits land on every child, so one row reads
+                                // as four separate controls.
+                                .accessibilityElement(children: .combine)
+                                .accessibilityAddTraits(.isButton)
+                                .accessibilityIdentifier("recent.row")
                             .swipeActions(edge: .trailing) {
                                 Button("Delete", role: .destructive) {
                                     remove(activity)
@@ -75,6 +82,7 @@ struct HomeView: View {
                 ForEach(quickPicks, id: \.self) { label in
                     Button(label) { start(label) }
                         .buttonStyle(.bordered)
+                        .accessibilityIdentifier("chip.\(label)")
                 }
                 Button {
                     addingCustom = true
@@ -82,6 +90,7 @@ struct HomeView: View {
                     Label("New", systemImage: "plus")
                 }
                 .buttonStyle(.bordered)
+                .accessibilityIdentifier("chip.new")
             }
             .padding(.vertical, 2)
         }
@@ -135,6 +144,7 @@ struct ActivityEditor: View {
             Form {
                 Section("Name") {
                     TextField("Label", text: $activity.label)
+                        .accessibilityIdentifier("editor.name")
                 }
                 Section("Note") {
                     TextField("Optional", text: $activity.note, axis: .vertical)
@@ -155,6 +165,7 @@ struct ActivityEditor: View {
                     Button("Delete Activity", role: .destructive) {
                         confirmingDelete = true
                     }
+                    .accessibilityIdentifier("editor.delete")
                 }
             }
             .navigationTitle("Edit")
@@ -189,6 +200,7 @@ struct ActivityEditor: View {
                                 previous: previous, label: label, start: start, end: end)
                         }
                     }
+                    .accessibilityIdentifier("editor.done")
                 }
             }
         }
@@ -206,7 +218,9 @@ private struct RunningRow: View {
         TimelineView(.periodic(from: .now, by: 1)) { _ in
             HStack {
                 VStack(alignment: .leading) {
-                    Text(activity.label).font(.headline)
+                    Text(activity.label)
+                        .font(.headline)
+                        .accessibilityIdentifier("running.label")
                     Text(activity.duration.elapsedDescription)
                         .font(.subheadline.monospacedDigit())
                         .foregroundStyle(.secondary)
@@ -214,6 +228,7 @@ private struct RunningRow: View {
                 Spacer()
                 Button("Stop", action: onStop)
                     .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier("running.stop")
             }
         }
     }

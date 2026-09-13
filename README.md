@@ -129,26 +129,36 @@ use the app.
 
 ## Tests
 
+Before shipping anything:
+
 ```sh
-xcodebuild test -project Trace.xcodeproj -scheme Trace \
-  -destination 'platform=iOS Simulator,name=iPhone 17'
+./Scripts/preflight.sh
 ```
 
-The suite runs on the Simulator — it covers pure logic, so it needs no health
-data and no device:
+That regenerates the project, runs both suites, and builds a signed Release
+archive — it fails loudly if any of them does. **68 tests: 45 unit, 23 UI.**
 
 | Suite | Covers |
 |---|---|
 | `DayCursorTests` | Day stepping: midnight normalisation, refusing the future, a 7-day round trip |
+| `DayAnchorTests` | Where a zoomed window lands, and that it never escapes the day |
 | `BandLayoutTests` | Clipping activities to a day: midnight crossings, zero-width bands, inverted intervals |
 | `StressScoreTests` | The strain score, chiefly the cases with too little history to have a baseline |
+| `QuickLabelTests` | Quick-pick ordering by use, with recency and built-in order as tie-breaks |
 | `ActivityTests` | The model, against an in-memory `ModelContainer` |
-| `DayStepperUITests` | The day stepper driven through the real UI (XCUITest) |
+| `LoggingUITests` | Start, stop, accumulate in Recent, and a typed label becoming a chip |
+| `EditingUITests` | Opening the editor, renaming, deleting from the sheet and by swipe |
+| `DayStepperUITests` | Stepping days through the real UI |
+| `NavigationUITests` | Switching tabs, repeatedly and in both directions |
+| `TrendsUITests` | Both charts rendering, and explaining themselves without data |
 
-`DayStepperUITests` exists because the stepper once froze for a reason no unit
-test could reach: two buttons in one `List` row let the row swallow their taps.
-Reverting that one fix fails three of its five cases, so it is a real regression
-test rather than decoration.
+The UI suite earns its keep. Three faults it caught that no unit test could:
+a `List` row swallowing a `Button`'s taps (twice — the day chevrons, then the
+Recent rows, where tapping to edit silently did nothing), and a `TabView` bound
+to a constant, which left the tab bar inert. Each was verified by reverting the
+fix and watching the relevant tests go red.
+
+Run a suite alone with `-only-testing:TraceTests` or `-only-testing:TraceUITests`.
 
 ### Sample data
 
@@ -163,8 +173,9 @@ writing heart rate would need share access this app has no business holding.
 xcrun simctl launch <device> com.and.Trace -sample-data
 ```
 
-What the suite still does **not** cover: the other half of that bug, where a
-scrollable chart held a scroll offset pointing into the previous day's domain and
-rendered blank. The date label updates correctly in that state, so no assertion
-on it can catch a chart that simply drew nothing. Verifying that needs a device
-and a pair of eyes.
+What the suite still does **not** cover: whether a chart actually *drew*
+anything. A scrollable chart once held a scroll offset pointing into the previous
+day's domain and rendered blank while the date label updated correctly, so no
+assertion on labels or existence can catch it. Swift Charts content is not
+meaningfully introspectable from XCUITest. That still needs a device and a pair
+of eyes.
