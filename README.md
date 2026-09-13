@@ -41,8 +41,9 @@ shaded band spanning its real duration. Step back through previous days with the
 arrows. This is the screen the app opens on, because it is the one that answers
 the question.
 
-**Trends.** A daily *strain* score over the last 60 days, and mean strain broken
-down by activity — which of the things you do line up with your harder days.
+**Activity.** What your heart actually did during each logged session: average
+and peak beats per minute measured *inside* the activity's own window, and how
+far that ran above your usual rate for those hours.
 
 ## Activities in Apple Health
 
@@ -56,21 +57,28 @@ The tradeoff is the container: Mindful Minutes is the only interval-shaped slot
 in Health that is not a workout, so logged study time and genuine meditation
 share a bucket. That is the cost of not writing workouts — see below.
 
-## The strain score
+## Measuring an activity
 
-Apple Health has no "stress" metric. Trace derives one from the two signals that
-actually track autonomic load:
+For each session, Trace reads the heart-rate samples that fall inside it and
+reports the mean, the peak, and a comparison against your own typical rate for
+the hours involved — that baseline being the median heart rate per hour of day
+over the last 30 days. Median, not mean, because one workout in an hour slot
+would drag a mean upwards and make every later session look calm by comparison.
 
-- **HRV (SDNN)** — lower means more strain
-- **Resting heart rate** — higher means more strain
+The figure is in **beats per minute**, deliberately not a 0-100 score. A score
+needs a scale to be read against; bpm above your own usual is interpretable on
+its own.
 
-Each is z-scored against *your own* history rather than population norms, because
-absolute HRV varies enormously between people and only deviation from your own
-baseline carries meaning. The two are averaged and mapped onto 0–100, where **50
-is a typical day for you** and one standard deviation moves the score 20 points.
+A previous version scored *daily strain* from HRV and resting heart rate. It was
+removed. Both inputs are measured at or near rest — resting heart rate is a
+single value per day, and most HRV samples land overnight — so the score
+described the night rather than the day, and could not tell two activities on
+the same date apart. Activities logged on one day all reported that day's
+number, which looked like a bug but was the granularity showing through.
 
-This means the score is meaningless for the first couple of weeks — there is no
-baseline yet, so every day reads as typical. That is honest behaviour, not a bug.
+Sessions resting on fewer than five readings are marked: outside a workout the
+watch samples every few minutes, so a short session can rest on two or three
+readings, and a mean over those is noise wearing a number.
 
 ## What it deliberately does not do
 

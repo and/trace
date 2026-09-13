@@ -40,7 +40,7 @@ struct RootView: View {
                 .tabItem { Label("Today", systemImage: "waveform.path.ecg") }
                 .tag(0)
             TrendView(health: health)
-                .tabItem { Label("Trends", systemImage: "chart.xyaxis.line") }
+                .tabItem { Label("Activity", systemImage: "chart.bar.xaxis") }
                 .tag(1)
         }
         .task {

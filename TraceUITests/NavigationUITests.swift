@@ -19,32 +19,32 @@ final class NavigationUITests: XCTestCase {
     func testBothTabsExist() {
         let app = launchApp()
         XCTAssertTrue(app.tabBars.buttons["Today"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.tabBars.buttons["Trends"].exists)
+        XCTAssertTrue(app.tabBars.buttons["Activity"].exists)
     }
 
     /// The regression test: tapping Trends must actually move there.
-    func testCanSwitchToTrends() {
+    func testCanSwitchToActivity() {
         let app = launchApp()
-        let trends = app.tabBars.buttons["Trends"]
-        XCTAssertTrue(trends.waitForExistence(timeout: 10))
+        let activity = app.tabBars.buttons["Activity"]
+        XCTAssertTrue(activity.waitForExistence(timeout: 10))
 
-        trends.tap()
+        activity.tap()
         XCTAssertTrue(
-            app.staticTexts["Trends"].waitForExistence(timeout: 5),
-            "Tapping the Trends tab should show the Trends screen"
+            app.staticTexts["Activity"].waitForExistence(timeout: 5),
+            "Tapping the Activity tab should show the Activity screen"
         )
-        XCTAssertTrue(trends.isSelected, "The Trends tab should be selected after tapping it")
+        XCTAssertTrue(activity.isSelected, "The Activity tab should be selected after tapping it")
     }
 
     /// And back again — a binding that only moves one way is still broken.
     func testCanSwitchBackToToday() {
         let app = launchApp()
         let today = app.tabBars.buttons["Today"]
-        let trends = app.tabBars.buttons["Trends"]
-        XCTAssertTrue(trends.waitForExistence(timeout: 10))
+        let activity = app.tabBars.buttons["Activity"]
+        XCTAssertTrue(activity.waitForExistence(timeout: 10))
 
-        trends.tap()
-        XCTAssertTrue(trends.isSelected)
+        activity.tap()
+        XCTAssertTrue(activity.isSelected)
 
         today.tap()
         XCTAssertTrue(today.isSelected, "The Today tab should be selected after tapping back")
@@ -56,12 +56,12 @@ final class NavigationUITests: XCTestCase {
     func testSwitchingRepeatedlyKeepsWorking() {
         let app = launchApp()
         let today = app.tabBars.buttons["Today"]
-        let trends = app.tabBars.buttons["Trends"]
-        XCTAssertTrue(trends.waitForExistence(timeout: 10))
+        let activity = app.tabBars.buttons["Activity"]
+        XCTAssertTrue(activity.waitForExistence(timeout: 10))
 
         for pass in 1...3 {
-            trends.tap()
-            XCTAssertTrue(trends.isSelected, "Trends should be selected on pass \(pass)")
+            activity.tap()
+            XCTAssertTrue(activity.isSelected, "Activity should be selected on pass \(pass)")
             today.tap()
             XCTAssertTrue(today.isSelected, "Today should be selected on pass \(pass)")
         }

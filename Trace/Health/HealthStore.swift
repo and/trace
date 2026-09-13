@@ -4,7 +4,9 @@ import HealthKit
 @MainActor
 final class HealthStore: ObservableObject {
 
-    @Published private(set) var days: [DayMetrics] = []
+    /// Typical heart rate per hour of day, built from recent history. Used to
+    /// say whether an activity ran hot for the time of day it happened at.
+    @Published private(set) var hourlyBaseline: [Int: Double] = [:]
 
     /// Bumped on every explicit refresh. Views key their load task on it, so a
     /// pull-to-refresh or a return to the foreground re-reads HealthKit — the
@@ -56,10 +58,13 @@ final class HealthStore: ObservableObject {
         await load()
     }
 
-    func load(daysBack: Int = 60) async {
+    /// Builds the typical-heart-rate-per-hour baseline. That is all this does
+    /// now: the daily strain series it used to compute lost its graph, and
+    /// recomputing it on every refresh was work nothing read.
+    func load(daysBack: Int = 30) async {
         #if DEBUG
         if SampleData.isEnabled {
-            days = SampleData.days()
+            hourlyBaseline = SampleData.hourlyBaseline()
             return
         }
         #endif
@@ -67,52 +72,7 @@ final class HealthStore: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
-        let calendar = Calendar.current
-        let end = calendar.startOfDay(for: .now)
-        guard let start = calendar.date(byAdding: .day, value: -daysBack, to: end) else { return }
-
-        async let hrv = dailyAverage(hrvType, unit: .secondUnit(with: .milli), from: start, to: end)
-        async let rhr = dailyAverage(rhrType, unit: HKUnit.count().unitDivided(by: .minute()), from: start, to: end)
-
-        let (hrvByDay, rhrByDay) = await (hrv, rhr)
-
-        var out: [DayMetrics] = []
-        var day = start
-        while day <= end {
-            out.append(DayMetrics(date: day, hrv: hrvByDay[day], restingHR: rhrByDay[day]))
-            guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
-            day = next
-        }
-        days = StressScore.annotate(out)
-    }
-
-    /// Daily means via HKStatisticsCollectionQuery — one bucketed query rather
-    /// than pulling every raw sample and aggregating on our side.
-    private func dailyAverage(
-        _ type: HKQuantityType,
-        unit: HKUnit,
-        from start: Date,
-        to end: Date
-    ) async -> [Date: Double] {
-        await withCheckedContinuation { continuation in
-            let query = HKStatisticsCollectionQuery(
-                quantityType: type,
-                quantitySamplePredicate: HKQuery.predicateForSamples(withStart: start, end: end),
-                options: .discreteAverage,
-                anchorDate: Calendar.current.startOfDay(for: start),
-                intervalComponents: DateComponents(day: 1)
-            )
-            query.initialResultsHandler = { _, results, _ in
-                var out: [Date: Double] = [:]
-                results?.enumerateStatistics(from: start, to: end) { stat, _ in
-                    if let value = stat.averageQuantity()?.doubleValue(for: unit) {
-                        out[Calendar.current.startOfDay(for: stat.startDate)] = value
-                    }
-                }
-                continuation.resume(returning: out)
-            }
-            store.execute(query)
-        }
+        hourlyBaseline = await buildHourlyBaseline(daysBack: daysBack)
     }
 
     /// Raw heart-rate samples for one day, for the intraday chart. Outside a
@@ -126,6 +86,17 @@ final class HealthStore: ObservableObject {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: day)
         guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return [] }
+        return await heartRate(from: start, to: end)
+    }
+
+    /// Raw samples in an arbitrary window — used for one activity's span.
+    func heartRate(from start: Date, to end: Date) async -> [HRSample] {
+        #if DEBUG
+        if SampleData.isEnabled {
+            return SampleData.heartRate(on: start).filter { $0.date >= start && $0.date <= end }
+        }
+        #endif
+        guard isAvailable else { return [] }
 
         return await withCheckedContinuation { continuation in
             let query = HKSampleQuery(
@@ -189,5 +160,42 @@ final class HealthStore: ObservableObject {
         if let previous { await deleteActivity(sampleID: previous) }
         guard let end else { return nil }   // still running: nothing to write yet
         return await writeActivity(label: label, start: start, end: end)
+    }
+
+    /// Hourly averages over recent history, collapsed into one typical value
+    /// per hour of day. A statistics query does the bucketing in HealthKit
+    /// rather than pulling tens of thousands of raw samples across.
+    private func buildHourlyBaseline(daysBack: Int) async -> [Int: Double] {
+        #if DEBUG
+        if SampleData.isEnabled { return SampleData.hourlyBaseline() }
+        #endif
+        guard isAvailable else { return [:] }
+
+        let calendar = Calendar.current
+        let end = Date()
+        guard let start = calendar.date(byAdding: .day, value: -daysBack, to: end) else { return [:] }
+
+        let averages: [(date: Date, bpm: Double)] = await withCheckedContinuation { continuation in
+            let query = HKStatisticsCollectionQuery(
+                quantityType: hrType,
+                quantitySamplePredicate: HKQuery.predicateForSamples(withStart: start, end: end),
+                options: .discreteAverage,
+                anchorDate: calendar.startOfDay(for: start),
+                intervalComponents: DateComponents(hour: 1)
+            )
+            query.initialResultsHandler = { _, results, _ in
+                var out: [(date: Date, bpm: Double)] = []
+                let unit = HKUnit.count().unitDivided(by: .minute())
+                results?.enumerateStatistics(from: start, to: end) { stat, _ in
+                    if let value = stat.averageQuantity()?.doubleValue(for: unit) {
+                        out.append((date: stat.startDate, bpm: value))
+                    }
+                }
+                continuation.resume(returning: out)
+            }
+            store.execute(query)
+        }
+
+        return LoadCalculator.hourlyBaseline(hourlyAverages: averages)
     }
 }

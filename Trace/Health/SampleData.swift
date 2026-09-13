@@ -61,6 +61,21 @@ enum SampleData {
         return StressScore.annotate(out)
     }
 
+    /// A typical-heart-rate-per-hour curve matching the synthetic day.
+    static func hourlyBaseline() -> [Int: Double] {
+        var out: [Int: Double] = [:]
+        for hour in 0..<24 {
+            let step = Double(hour)
+            switch step {
+            case ..<6.5:  out[hour] = 57 + 4 * sin(step / 2)
+            case ..<8:    out[hour] = 58 + (step - 6.5) * 14
+            case ..<21:   out[hour] = 77 + 7 * sin((step - 8) / 2.4)
+            default:      out[hour] = 72 - (step - 21) * 4
+            }
+        }
+        return out
+    }
+
     /// Activities for today, positioned to sit over the interesting parts of
     /// the synthetic trace.
     static func activities(calendar: Calendar = .current) -> [(String, Date, Date)] {
