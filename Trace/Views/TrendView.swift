@@ -69,34 +69,73 @@ struct TrendView: View {
     // MARK: - Mean heart rate per activity
 
     private var comparison: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let rows = comparable()
+
+        return VStack(alignment: .leading, spacing: 8) {
             Text("Heart rate by activity").font(.headline)
-            Text("Average beats per minute measured during each session, against your usual rate for that time of day.")
+            Text("How far each activity ran from your usual rate for the hours it covered.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Chart(byLabel(), id: \.label) { row in
+            Chart(rows, id: \.label) { row in
+                // Bars run from zero — your own baseline — so length encodes the
+                // deviation honestly. Drawing absolute bpm from a 40 floor made
+                // 92 and 108 look three times apart.
                 BarMark(
-                    x: .value("BPM", row.meanBPM),
-                    y: .value("Activity", row.label)
+                    xStart: .value("Usual", 0),
+                    xEnd: .value("Difference", row.delta ?? 0),
+                    // The row header carries the absolute rate: there is space
+                    // there, and past the bar there is not — a "92 bpm +10"
+                    // annotation had to be shoved back over its own bar.
+                    y: .value("Activity", "\(row.label)  ·  \(Int(row.meanBPM.rounded())) bpm")
                 )
-                .cornerRadius(4)
-                .foregroundStyle(Color.seriesPrimary.opacity(row.isReliable ? 1 : 0.35))
-                .annotation(position: .trailing, overflowResolution: Self.annotationOverflow) {
-                    BarValue(mean: row.meanBPM, delta: row.delta)
+                .cornerRadius(3)
+                .foregroundStyle((row.delta ?? 0) >= 0 ? Color.seriesWarm : Color.seriesPrimary)
+                .opacity(row.isReliable ? 1 : 0.35)
+                .annotation(
+                    position: Int((row.delta ?? 0).rounded()) < 0 ? .leading : .trailing,
+                    spacing: 6,
+                    overflowResolution: Self.annotationOverflow
+                ) {
+                    DeltaLabel(delta: row.delta ?? 0)
                 }
-            }
-            .chartXScale(domain: 40...(maxBPM + 26))
-            // No x axis: every bar carries its own value, so the scale would
-            // only repeat what is already written, and its last tick clipped
-            // against the card edge.
-            .chartXAxis(.hidden)
-            .frame(height: CGFloat(byLabel().count) * 44 + 8)
 
-            Text("A positive figure means your heart ran that many beats above your usual for the hours involved. Faded bars rest on fewer than five readings.")
+                RuleMark(x: .value("Usual", 0))
+                    .lineStyle(StrokeStyle(lineWidth: 1))
+                    .foregroundStyle(.secondary.opacity(0.5))
+            }
+            .chartXScale(domain: -deltaExtent...deltaExtent)
+            .chartXAxis(.hidden)
+            .frame(height: CGFloat(rows.count) * 44 + 8)
+
+            Text(caption(for: rows))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
+    }
+
+    /// The zero line is your usual rate, so the axis is symmetric around it —
+    /// an asymmetric one would make a small rise look larger than an equal fall.
+    private var deltaExtent: Double {
+        let largest = comparable().compactMap { $0.delta.map(abs) }.max() ?? 5
+        return max(6, largest * 1.45)
+    }
+
+    private func caption(for rows: [ActivityLoad]) -> String {
+        let base = "Bars run from your usual rate for those hours: right is faster, left is slower, and the figure beside each bar is the difference in beats per minute."
+        let unreliable = rows.contains { !$0.isReliable }
+        let unmeasured = byLabel().count - rows.count
+        var parts = [base]
+        if unreliable { parts.append("Faded bars rest on fewer than five readings.") }
+        if unmeasured > 0 {
+            parts.append("\(unmeasured) activity\(unmeasured == 1 ? "" : "s") had too little history for those hours to compare against.")
+        }
+        return parts.joined(separator: " ")
+    }
+
+    /// Only labels with a baseline can be placed against it.
+    private func comparable() -> [ActivityLoad] {
+        byLabel().filter { $0.delta != nil }.sorted { ($0.delta ?? 0) > ($1.delta ?? 0) }
     }
 
     // MARK: - Individual sessions
@@ -144,13 +183,6 @@ struct TrendView: View {
     }
 
     // MARK: - Data
-
-    /// The upper bound of the bar axis. The headroom is for the value and
-    /// delta drawn past each bar's end: without it the longest bar's label runs
-    /// into the axis labels and out of the card.
-    private var maxBPM: Double {
-        max(100, byLabel().map(\.meanBPM).max() ?? 100)
-    }
 
     private func deltaText(_ delta: Double) -> String {
         let rounded = Int(delta.rounded())
@@ -202,33 +234,20 @@ struct TrendView: View {
     }
 }
 
-/// The figure beside a bar. Its own view so the chart builder is not solving a
-/// modifier chain inside an annotation closure.
-private struct BarValue: View {
-    let mean: Double
-    let delta: Double?
+/// The signed difference beside a bar. Kept short deliberately — anything
+/// longer cannot fit past a bar that already reaches most of the plot. Its own
+/// view so the chart builder is not solving a modifier chain in a closure.
+private struct DeltaLabel: View {
+    let delta: Double
 
     var body: some View {
-        HStack(spacing: 5) {
-            Text("\(Int(mean.rounded()))")
-                .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
-            if let delta {
-                let rounded = Int(delta.rounded())
-                Text(rounded > 0 ? "+\(rounded)" : "\(rounded)")
-                    .font(.caption2.monospacedDigit())
-                    // Zero is not "elevated": colour it like any other neutral
-                    // figure rather than flagging it.
-                    .foregroundStyle(deltaColor(rounded))
-            }
-        }
-        .fixedSize()
-    }
-
-    private func deltaColor(_ rounded: Int) -> Color {
-        if rounded > 0 { return .seriesWarm }
-        if rounded < 0 { return .seriesPrimary }
-        return .secondary
+        let rounded = Int(delta.rounded())
+        Text(rounded > 0 ? "+\(rounded)" : "\(rounded)")
+            .font(.caption.monospacedDigit())
+            // Zero is not "elevated": colour it neutrally rather than flag it.
+            .foregroundStyle(rounded > 0 ? Color.seriesWarm
+                             : rounded < 0 ? Color.seriesPrimary : Color.secondary)
+            .fixedSize()
     }
 }
 
@@ -239,10 +258,12 @@ extension Color {
         dark:  Color(red: 0x39 / 255, green: 0x87 / 255, blue: 0xe5 / 255)
     )
 
-    /// Slot 2, for a figure that reads as "above usual" beside the blue.
+    /// The warm pole of the diverging pair. This chart runs either side of
+    /// your usual rate, so it needs two colours that read as opposites with a
+    /// neutral middle — blue and red, not two neighbouring categorical hues.
     static let seriesWarm = Color(
-        light: Color(red: 0xeb / 255, green: 0x68 / 255, blue: 0x34 / 255),
-        dark:  Color(red: 0xd9 / 255, green: 0x59 / 255, blue: 0x26 / 255)
+        light: Color(red: 0xe3 / 255, green: 0x49 / 255, blue: 0x48 / 255),
+        dark:  Color(red: 0xe6 / 255, green: 0x67 / 255, blue: 0x67 / 255)
     )
 
     init(light: Color, dark: Color) {

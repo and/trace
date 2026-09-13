@@ -83,8 +83,10 @@ enum SampleData {
         func at(_ hour: Double) -> Date { start.addingTimeInterval(hour * 3600) }
         return [
             ("Deep work", at(9.0), at(11.5)),
+            ("Commute", at(12.2), at(12.9)),
             ("Meeting", at(13.0), at(14.0)),
             ("Study", at(15.25), at(17.5)),
+            ("Movies", at(20.0), at(21.5)),
         ]
     }
 }
