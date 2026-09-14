@@ -12,6 +12,11 @@ struct HomeView: View {
     @State private var editing: Activity?
     @State private var addingCustom = false
 
+    /// Prompting is opt-in. It asks for notification permission and watches
+    /// HealthKit in the background, so it should never begin uninvited.
+    @AppStorage("promptsEnabled") private var promptsEnabled = false
+    @StateObject private var monitor = EventMonitor()
+
     private var running: Activity? { activities.first { $0.isRunning } }
     private var finished: [Activity] { activities.filter { !$0.isRunning } }
 
@@ -36,6 +41,14 @@ struct HomeView: View {
                     } else {
                         picker
                     }
+                }
+
+                Section {
+                    Toggle("Ask me what I'm doing", isOn: $promptsEnabled)
+                } footer: {
+                    Text(promptsEnabled
+                         ? "Your watch flags stretches where your heart rate stayed above its high-heart-rate threshold while you were still, and Trace asks what you were doing. It also checks in a few times a day, so ordinary moments are recorded too. Set the threshold in Watch › Heart."
+                         : "Trace can ask what you're doing when your heart rate is up, and log your answer against the time it happened.")
                 }
 
                 if !finished.isEmpty {
@@ -64,6 +77,13 @@ struct HomeView: View {
             }
             .listStyle(.insetGrouped)
             .refreshable { await health.refresh() }
+            .task(id: promptsEnabled) { await syncPrompts() }
+            .onChange(of: quickPicks) { _, labels in
+                // The one-tap replies are your own labels, so they have to keep
+                // up as the labels change.
+                guard promptsEnabled else { return }
+                Task { await CheckInScheduler.reschedule(labels: labels) }
+            }
             .navigationTitle("Today")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { if !finished.isEmpty { EditButton() } }
@@ -103,6 +123,15 @@ struct HomeView: View {
         guard !trimmed.isEmpty else { return }
         context.insert(Activity(label: trimmed))
         customLabel = ""
+    }
+
+    private func syncPrompts() async {
+        guard promptsEnabled else {
+            await CheckInScheduler.cancelAll()
+            return
+        }
+        await monitor.start(labels: quickPicks)
+        await CheckInScheduler.reschedule(labels: quickPicks)
     }
 
     private func stop(_ activity: Activity) {

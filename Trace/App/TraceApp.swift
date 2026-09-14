@@ -1,13 +1,31 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct TraceApp: App {
+    /// Built here rather than left to the scene modifier, so the notification
+    /// delegate can reach the same store when a tap arrives with the app closed.
+    /// One container, shared — two over the same store would be two writers.
+    private let container: ModelContainer?
+    private let delegate: NotificationDelegate
+
+    init() {
+        let container = try? ModelContainer(for: Activity.self)
+        self.container = container
+        self.delegate = NotificationDelegate(container: container)
+        UNUserNotificationCenter.current().delegate = delegate
+    }
+
     var body: some Scene {
         WindowGroup {
-            RootView()
+            if let container {
+                RootView().modelContainer(container)
+            } else {
+                Text("Could not open the activity store.")
+                    .foregroundStyle(.secondary)
+            }
         }
-        .modelContainer(for: Activity.self)
     }
 }
 

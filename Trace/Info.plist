@@ -24,6 +24,10 @@
 	<string>Trace reads heart rate variability and resting heart rate so it can show how your stress trends alongside the activities you log.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Trace saves the activities you log to Apple Health so other health apps can see them.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>processing</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>
